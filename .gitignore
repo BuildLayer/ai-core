@@ -1,0 +1,13 @@
+# Node
+/node_modules
+
+# Build
+/dist
+
+# Test
+/coverage
+
+# Cache
+.cache
+.idea
+.git
