@@ -2,7 +2,7 @@
 
 > Headless AI chat engine and store with support for multiple AI providers
 
-[![npm version](https://badge.fury.io/js/@buildlayer%2Fai-core.svg)](https://badge.fury.io/js/@buildlayer%2Fai-core)
+[![npm version](https://img.shields.io/npm/v/@buildlayer/ai-core.svg)](https://www.npmjs.com/package/@buildlayer/ai-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
