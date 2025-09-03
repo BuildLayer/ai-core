@@ -6,7 +6,7 @@ import {
   createGrokAdapter,
   createLocalLLMAdapter,
   weatherTool,
-} from "@ai-ui-sdk/core";
+} from "@buildlayer/ai-core";
 
 // Example usage of tetherai adapters
 
