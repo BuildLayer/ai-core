@@ -1,44 +1,47 @@
-# TetherAI Adapters
+# @buildlayer/ai-core
 
-This package provides seamless integration with all TetherAI providers through a unified adapter interface.
+> Headless AI chat engine and store with support for multiple AI providers
 
-## Available Adapters
+[![npm version](https://badge.fury.io/js/@buildlayer%2Fai-core.svg)](https://badge.fury.io/js/@buildlayer%2Fai-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **OpenAI**: `createOpenAIAdapter(apiKey)`
-- **Anthropic**: `createAnthropicAdapter(apiKey)`
-- **Mistral**: `createMistralAdapter(apiKey)`
-- **Grok**: `createGrokAdapter(apiKey)`
-- **Local LLM**: `createLocalLLMAdapter(config)`
+## Installation
+
+```bash
+# npm
+npm install @buildlayer/ai-core
+
+# pnpm
+pnpm add @buildlayer/ai-core
+
+# yarn
+yarn add @buildlayer/ai-core
+```
 
 ## Quick Start
 
 ```typescript
-import { ChatStore, createOpenAIAdapter, weatherTool } from "@ai-ui-sdk/core";
+import { ChatStore, createOpenAIAdapter } from "@buildlayer/ai-core";
 
 // Create a chat store with OpenAI
 const adapter = createOpenAIAdapter(process.env.OPENAI_API_KEY!);
 const chat = new ChatStore(adapter);
 
-// Add tools
-chat.registerTool(weatherTool);
-
 // Send a message
 await chat.send("Hello! How are you today?");
 
-// Send with specific options
-await chat.send("What's the weather like?", {
-  model: "gpt-4",
-  temperature: 0.7,
-  tools: [weatherTool],
+// Listen to state changes
+chat.subscribe((state) => {
+  console.log("Chat state:", state);
 });
 ```
 
-## Using Different Providers
+## Supported AI Providers
 
 ### OpenAI
 
 ```typescript
-import { createOpenAIAdapter } from "@ai-ui-sdk/core";
+import { createOpenAIAdapter } from "@buildlayer/ai-core";
 
 const adapter = createOpenAIAdapter(process.env.OPENAI_API_KEY!);
 const chat = new ChatStore(adapter);
@@ -47,7 +50,7 @@ const chat = new ChatStore(adapter);
 ### Anthropic
 
 ```typescript
-import { createAnthropicAdapter } from "@ai-ui-sdk/core";
+import { createAnthropicAdapter } from "@buildlayer/ai-core";
 
 const adapter = createAnthropicAdapter(process.env.ANTHROPIC_API_KEY!);
 const chat = new ChatStore(adapter);
@@ -56,7 +59,7 @@ const chat = new ChatStore(adapter);
 ### Mistral
 
 ```typescript
-import { createMistralAdapter } from "@ai-ui-sdk/core";
+import { createMistralAdapter } from "@buildlayer/ai-core";
 
 const adapter = createMistralAdapter(process.env.MISTRAL_API_KEY!);
 const chat = new ChatStore(adapter);
@@ -65,7 +68,7 @@ const chat = new ChatStore(adapter);
 ### Grok
 
 ```typescript
-import { createGrokAdapter } from "@ai-ui-sdk/core";
+import { createGrokAdapter } from "@buildlayer/ai-core";
 
 const adapter = createGrokAdapter(process.env.GROK_API_KEY!);
 const chat = new ChatStore(adapter);
@@ -74,7 +77,7 @@ const chat = new ChatStore(adapter);
 ### Local LLM (Ollama, etc.)
 
 ```typescript
-import { createLocalLLMAdapter } from "@ai-ui-sdk/core";
+import { createLocalLLMAdapter } from "@buildlayer/ai-core";
 
 const adapter = createLocalLLMAdapter({
   baseURL: "http://localhost:11434", // Ollama default
@@ -83,33 +86,111 @@ const adapter = createLocalLLMAdapter({
 const chat = new ChatStore(adapter);
 ```
 
-## Advanced Usage
+## Core Features
 
-### Custom TetherAI Provider
+### ChatStore
+
+The `ChatStore` is the main class that manages chat state and interactions:
 
 ```typescript
-import { createTetherAIAdapter } from "@ai-ui-sdk/core";
-import { openAI } from "@tetherai/openai";
+import { ChatStore, createOpenAIAdapter } from "@buildlayer/ai-core";
 
-// Create a custom provider
-const provider = openAI({ 
-  apiKey: process.env.OPENAI_API_KEY!,
-  // Additional options...
+const adapter = createOpenAIAdapter("your-api-key");
+const chat = new ChatStore(adapter);
+
+// Send messages
+await chat.send("Hello!");
+await chat.send("What's the weather like?", {
+  model: "gpt-4",
+  temperature: 0.7,
 });
 
-// Create adapter from provider
-const adapter = createTetherAIAdapter(provider);
-const chat = new ChatStore(adapter);
+// Subscribe to state changes
+chat.subscribe((state) => {
+  console.log("Status:", state.status);
+  console.log("Messages:", state.messages);
+});
 ```
 
-### Working with Tools
+### State Management
+
+The chat store provides reactive state management:
 
 ```typescript
-import { ChatStore, createOpenAIAdapter, weatherTool } from "@ai-ui-sdk/core";
+chat.subscribe((state) => {
+  switch (state.status) {
+    case "idle":
+      console.log("Ready for new messages");
+      break;
+    case "streaming":
+      console.log("Receiving response...");
+      break;
+    case "error":
+      console.error("Error:", state.error);
+      break;
+  }
+});
+```
 
-const chat = new ChatStore(createOpenAIAdapter(process.env.OPENAI_API_KEY!));
+### Message History
 
-// Register tools
+Access and manage conversation history:
+
+```typescript
+// Access state properties directly
+console.log("Session ID:", chat.sessionId);
+console.log("Total messages:", chat.messages.length);
+console.log("Current status:", chat.status);
+console.log("Last message:", chat.messages[chat.messages.length - 1]);
+
+// Clear history
+chat.clearHistory();
+```
+
+## Advanced Usage
+
+### Custom Adapters
+
+Create custom adapters for any AI provider:
+
+```typescript
+import { ChatStore, type ProviderAdapter, type ChatRequest, type Delta } from "@buildlayer/ai-core";
+
+const customAdapter: ProviderAdapter = {
+  async chat(req: ChatRequest, opts: { signal?: AbortSignal }): Promise<AsyncIterable<Delta>> {
+    // Implement your custom AI provider logic
+    return {
+      async *[Symbol.asyncIterator]() {
+        yield { type: "text", chunk: "Custom response" };
+        yield { type: "done", finishReason: "stop" };
+      }
+    };
+  },
+  
+  async models() {
+    return [
+      {
+        id: "custom-model",
+        name: "Custom Model",
+        provider: "custom",
+        contextLength: 4096,
+        supportsTools: false
+      }
+    ];
+  }
+};
+
+const chat = new ChatStore(customAdapter);
+```
+
+### Tool Integration
+
+Register and use tools with your chat:
+
+```typescript
+import { weatherTool } from "@buildlayer/ai-core";
+
+// Register a tool
 chat.registerTool(weatherTool);
 
 // Send message that might trigger tool usage
@@ -124,40 +205,11 @@ chat.subscribe((state) => {
 });
 ```
 
-## Type Safety
+### Streaming Responses
 
-All adapters are fully typed and provide:
-
-- Proper TypeScript definitions
-- IntelliSense support
-- Compile-time error checking
-- Runtime type validation
-
-## Error Handling
+Handle streaming responses in real-time:
 
 ```typescript
-const chat = new ChatStore(adapter);
-
-chat.subscribe((state) => {
-  if (state.status === "error") {
-    console.error("Chat error:", state.error);
-  }
-});
-
-try {
-  await chat.send("Hello!");
-} catch (error) {
-  console.error("Failed to send message:", error);
-}
-```
-
-## Streaming
-
-All adapters support streaming responses:
-
-```typescript
-const chat = new ChatStore(adapter);
-
 chat.subscribe((state) => {
   if (state.status === "streaming") {
     const lastMessage = state.messages[state.messages.length - 1];
@@ -167,3 +219,146 @@ chat.subscribe((state) => {
   }
 });
 ```
+
+## API Reference
+
+### ChatStore API
+
+```typescript
+class ChatStore {
+  constructor(adapter: ProviderAdapter, sessionId?: string, memory?: MemoryAdapter);
+  
+  // Send a message
+  send(input: string | ContentPart[], opts?: SendOpts): Promise<void>;
+  
+  // Subscribe to state changes
+  subscribe(listener: (state: ChatState) => void): () => void;
+  
+  // State getters
+  get sessionId(): string;
+  get messages(): Message[];
+  get status(): "idle" | "streaming" | "tool-calling" | "error";
+  get currentToolCall(): { id: string; name: string; args: Record<string, unknown> } | undefined;
+  get error(): string | undefined;
+  
+  // Message history management
+  clearHistory(): void;
+  exportHistory(): Message[];
+  importHistory(msgs: Message[]): void;
+  
+  // Tool management
+  registerTool(tool: ToolDef): void;
+  unregisterTool(name: string): void;
+  getTools(): ToolDef[];
+  runTool(call: { name: string; args: Record<string, unknown>; id: string }): Promise<unknown>;
+  
+  // Control
+  stop(): void;
+  reset(): void;
+}
+```
+
+### Adapters
+
+All adapters implement the `ProviderAdapter` interface:
+
+```typescript
+interface ProviderAdapter {
+  chat(req: ChatRequest, opts: { signal?: AbortSignal }): Promise<AsyncIterable<Delta>>;
+  models?(): Promise<ModelInfo[]>;
+}
+```
+
+### Types
+
+```typescript
+interface ChatState {
+  sessionId: string;
+  messages: Message[];
+  status: "idle" | "streaming" | "tool-calling" | "error";
+  currentToolCall?: { id: string; name: string; args: Record<string, unknown> };
+  error?: string;
+}
+
+interface Message {
+  id: string;
+  role: "user" | "assistant" | "system" | "tool";
+  content: ContentPart[];
+  createdAt: number;
+  meta?: Record<string, unknown>;
+}
+
+interface SendOpts {
+  model?: string;
+  tools?: ToolDef[];
+  temperature?: number;
+  maxTokens?: number;
+}
+```
+
+## Error Handling
+
+```typescript
+const chat = new ChatStore(adapter);
+
+// Handle errors in subscription
+chat.subscribe((state) => {
+  if (state.status === "error") {
+    console.error("Chat error:", state.error);
+  }
+});
+
+// Handle errors in send
+try {
+  await chat.send("Hello!");
+} catch (error) {
+  console.error("Failed to send message:", error);
+}
+```
+
+## TypeScript Support
+
+This package is built with TypeScript and provides:
+
+- Full type definitions
+- IntelliSense support
+- Compile-time error checking
+- Runtime type validation
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+git clone https://github.com/BuildLayer/ai-core.git
+cd ai-core
+
+# npm
+npm install
+npm run dev
+
+# pnpm
+pnpm install
+pnpm dev
+
+# yarn
+yarn install
+yarn dev
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Tetherai](https://github.com/nbursa/tetherai) - AI provider abstraction
+  - [@tetherai/openai](https://github.com/nbursa/TetherAI/tree/main/packages/provider/openai) - OpenAI provider
+  - [@tetherai/anthropic](https://github.com/nbursa/TetherAI/tree/main/packages/provider/anthropic) - Anthropic provider
+  - [@tetherai/mistral](https://github.com/nbursa/TetherAI/tree/main/packages/provider/mistral) - Mistral provider
+  - [@tetherai/grok](https://github.com/nbursa/TetherAI/tree/main/packages/provider/grok) - Grok provider
+  - [@tetherai/local](https://github.com/nbursa/TetherAI/tree/main/packages/provider/local) - Local LLM provider
+
+## Made with ❤️ by the BuildLayer.dev team
