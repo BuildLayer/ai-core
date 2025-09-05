@@ -185,11 +185,11 @@ export function createGrokAdapter(
 export function createLocalLLMAdapter(config: {
   baseURL: string;
   model: string;
-  apiKey: string;
+  apiKey?: string;
 }): ProviderAdapter {
   const provider = localLLM({
     baseURL: config.baseURL,
-    apiKey: config.apiKey,
+    apiKey: config.apiKey || "ollama",
   });
   return createTetherAIAdapter(provider);
 }

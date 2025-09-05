@@ -124,7 +124,7 @@ export type ChatController = ChatState & ChatActions;
 // Provider Configuration Types
 export interface ProviderConfig {
   provider: "openai" | "anthropic" | "mistral" | "grok" | "local";
-  apiKey: string;
+  apiKey?: string; // Optional for local LLM
   model: string;
   baseURL?: string; // For custom endpoints
   options?: {

@@ -101,6 +101,11 @@ describe("AIProviderManager", () => {
       expect(models[0].id).toBe("gpt-4");
     });
 
+    it("should return empty array for local LLM", async () => {
+      const models = await manager.getAvailableModels("local");
+      expect(models).toHaveLength(0);
+    });
+
     it("should return default models when provider fails", async () => {
       // Mock the adapter to throw an error
       const { createOpenAIAdapter } = await import("../adapters");
@@ -158,24 +163,23 @@ describe("AIProviderManager", () => {
       expect(result.errors).toContain("API key is required for openai");
     });
 
-    it("should require API key and model for all providers", () => {
+    it("should require model for all providers but API key only for non-local", () => {
       const config: ProviderConfig = {
         provider: "local",
         baseURL: "http://localhost:11434/v1",
-        // Missing API key and model
+        // Missing model
       } as any;
 
       const result = manager.validateConfig(config);
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain("API key is required for local");
       expect(result.errors).toContain("Model is required for local");
+      expect(result.errors).not.toContain("API key is required for local");
     });
 
     it("should validate baseURL for local provider", () => {
       const config: ProviderConfig = {
         provider: "local",
         baseURL: "invalid-url",
-        apiKey: "test-key",
         model: "llama2",
       };
 

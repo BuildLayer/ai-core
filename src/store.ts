@@ -19,6 +19,7 @@ export class ChatStore implements ChatController {
   private _abortController?: AbortController;
   private _listeners: Set<(state: ChatState) => void> = new Set();
   private _memory?: MemoryAdapter;
+  private _updateTimeout?: NodeJS.Timeout;
 
   constructor(
     provider: ProviderAdapter,
@@ -475,33 +476,11 @@ export class ChatStore implements ChatController {
         createdAt: Date.now(),
       };
 
-      // console.log("ChatStore send - adding user message:", userMessage);
-      // console.log(
-      //   "ChatStore send - current messages count:",
-      //   this._state.messages.length
-      // );
-      // console.log(
-      //   "ChatStore send - current messages:",
-      //   this._state.messages.map((m) => ({
-      //     id: m.id,
-      //     role: m.role,
-      //     content:
-      //       m.content[0]?.type === "text"
-      //         ? m.content[0].text?.substring(0, 20)
-      //         : m.content[0]?.type,
-      //   }))
-      // );
-
       this._updateState({
         messages: [...this._state.messages, userMessage],
         status: "streaming",
         error: undefined,
       });
-
-      // console.log(
-      //   "ChatStore send - after adding user message, messages count:",
-      //   this._state.messages.length
-      // );
 
       // Prepare chat request (use updated state that includes user message)
       const chatRequest = {
@@ -512,41 +491,11 @@ export class ChatStore implements ChatController {
         maxTokens: opts.maxTokens,
       };
 
-      // console.log(
-      //   "ChatStore send - chatRequest messages count:",
-      //   chatRequest.messages.length
-      // );
-      // console.log(
-      //   "ChatStore send - chatRequest messages:",
-      //   chatRequest.messages.map((m) => ({
-      //     id: m.id,
-      //     role: m.role,
-      //     content:
-      //       m.content[0]?.type === "text"
-      //         ? m.content[0].text?.substring(0, 20)
-      //         : m.content[0]?.type,
-      //   }))
-      // );
-      // console.log("ChatStore send - provider:", this._provider);
-
       // Start streaming
       this._abortController = new AbortController();
       const stream = await this._provider.chat(chatRequest, {
         signal: this._abortController.signal,
       });
-
-      // console.log("ChatStore send - about to start for await loop");
-      // console.log("ChatStore send - stream:", stream);
-      // console.log("ChatStore send - stream type:", typeof stream);
-      // console.log(
-      //   "ChatStore send - stream is AsyncGenerator:",
-      //   stream[Symbol.asyncIterator] ? "YES" : "NO"
-      // );
-      // console.log(
-      //   "ChatStore send - stream constructor:",
-      //   stream.constructor.name
-      // );
-      // console.log("ChatStore send - stream toString:", stream.toString());
 
       let assistantMessage: Message = {
         id: nanoid(),
@@ -556,7 +505,6 @@ export class ChatStore implements ChatController {
       };
 
       for await (const delta of stream) {
-        // console.log("ChatStore send - received delta:", delta);
         if (delta.type === "text") {
           // Append text chunk
           const textContent = assistantMessage.content.find(
@@ -569,17 +517,25 @@ export class ChatStore implements ChatController {
           }
 
           // Add assistant message if not already added
-          if (this._state.messages.length === 1) {
+          const lastMessage =
+            this._state.messages[this._state.messages.length - 1];
+
+          if (!lastMessage || lastMessage.role !== "assistant") {
             this._updateState({
               messages: [...this._state.messages, assistantMessage],
             });
           } else {
-            // Update the existing assistant message
+            // Update the existing assistant message without removing user messages
+            const messages = [...this._state.messages];
+            // Find the last assistant message and replace it
+            for (let i = messages.length - 1; i >= 0; i--) {
+              if (messages[i].role === "assistant") {
+                messages[i] = assistantMessage;
+                break;
+              }
+            }
             this._updateState({
-              messages: [
-                ...this._state.messages.slice(0, -1),
-                assistantMessage,
-              ],
+              messages,
             });
           }
         } else if (delta.type === "tool_use") {
@@ -592,7 +548,9 @@ export class ChatStore implements ChatController {
           });
 
           // Add assistant message if not already added
-          if (this._state.messages.length === 1) {
+          const lastMessage =
+            this._state.messages[this._state.messages.length - 1];
+          if (!lastMessage || lastMessage.role !== "assistant") {
             this._updateState({
               messages: [...this._state.messages, assistantMessage],
               status: "tool-calling",
@@ -603,12 +561,17 @@ export class ChatStore implements ChatController {
               },
             });
           } else {
-            // Update the existing assistant message with tool_use
+            // Update the existing assistant message with tool_use without removing user messages
+            const messages = [...this._state.messages];
+            // Find the last assistant message and replace it
+            for (let i = messages.length - 1; i >= 0; i--) {
+              if (messages[i].role === "assistant") {
+                messages[i] = assistantMessage;
+                break;
+              }
+            }
             this._updateState({
-              messages: [
-                ...this._state.messages.slice(0, -1),
-                assistantMessage,
-              ],
+              messages,
               status: "tool-calling",
               currentToolCall: {
                 id: delta.id,
@@ -736,18 +699,6 @@ export class ChatStore implements ChatController {
   };
 
   importHistory = (msgs: Message[]): void => {
-    // console.log("ChatStore importHistory called with", msgs.length, "messages");
-    // console.log(
-    //   "ChatStore importHistory - messages:",
-    //   msgs.map((m) => ({
-    //     id: m.id,
-    //     role: m.role,
-    //     content:
-    //       m.content[0]?.type === "text"
-    //         ? m.content[0].text?.substring(0, 20)
-    //         : m.content[0]?.type,
-    //   }))
-    // );
     if (!Array.isArray(msgs)) {
       throw new Error("Messages must be an array");
     }
@@ -861,12 +812,6 @@ export class ChatStore implements ChatController {
   };
 
   private _updateState = (updates: Partial<ChatState>): void => {
-    // console.log("ChatStore _updateState called with updates:", updates);
-    // console.log(
-    //   "ChatStore _updateState - before update, messages count:",
-    //   this._state.messages.length
-    // );
-
     // Validate updates
     if (updates.messages && !Array.isArray(updates.messages)) {
       throw new Error("Messages must be an array");
@@ -885,24 +830,26 @@ export class ChatStore implements ChatController {
     }
 
     this._state = { ...this._state, ...updates };
-    // console.log(
-    //   "ChatStore _updateState - after update, messages count:",
-    //   this._state.messages.length
-    // );
-    // console.log(
-    //   "ChatStore _updateState - notifying",
-    //   this._listeners.size,
-    //   "listeners"
-    // );
-    this._listeners.forEach((listener) => {
-      try {
-        listener(this._state);
-      } catch (error) {
-        console.error("Error in state listener:", error);
-        // Remove problematic listener
-        this._listeners.delete(listener);
-      }
-    });
+
+    // Throttle updates to prevent infinite loops during streaming
+    if (this._updateTimeout) {
+      clearTimeout(this._updateTimeout);
+    }
+
+    // Use longer throttle during streaming to prevent infinite loops
+    const throttleDelay = this._state.status === "streaming" ? 100 : 10;
+
+    this._updateTimeout = setTimeout(() => {
+      this._listeners.forEach((listener) => {
+        try {
+          listener(this._state);
+        } catch (error) {
+          console.error("Error in state listener:", error);
+          // Remove problematic listener
+          this._listeners.delete(listener);
+        }
+      });
+    }, throttleDelay);
 
     // Save to memory if available
     if (this._memory) {

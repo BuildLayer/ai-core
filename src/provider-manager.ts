@@ -29,6 +29,11 @@ export class AIProviderManager implements ProviderManager {
   }
 
   async getAvailableModels(provider: string): Promise<ModelInfo[]> {
+    // For local LLM, return empty array since user can enter any model name
+    if (provider === "local") {
+      return [];
+    }
+
     const config: ProviderConfig = {
       provider: provider as any,
       apiKey: "dummy", // We need a dummy key to get models
@@ -52,25 +57,25 @@ export class AIProviderManager implements ProviderManager {
 
     switch (config.provider) {
       case "openai":
-        return createOpenAIAdapter(config.apiKey, {
+        return createOpenAIAdapter(config.apiKey!, {
           baseURL: config.baseURL,
           defaultModel: config.model,
         });
 
       case "anthropic":
-        return createAnthropicAdapter(config.apiKey, {
+        return createAnthropicAdapter(config.apiKey!, {
           baseURL: config.baseURL,
           defaultModel: config.model,
         });
 
       case "mistral":
-        return createMistralAdapter(config.apiKey, {
+        return createMistralAdapter(config.apiKey!, {
           baseURL: config.baseURL,
           defaultModel: config.model,
         });
 
       case "grok":
-        return createGrokAdapter(config.apiKey, {
+        return createGrokAdapter(config.apiKey!, {
           baseURL: config.baseURL,
           defaultModel: config.model,
         });
@@ -98,8 +103,8 @@ export class AIProviderManager implements ProviderManager {
       errors.push(`Invalid provider: ${config.provider}`);
     }
 
-    // Check API key requirements
-    if (!config.apiKey) {
+    // Check API key requirements (not required for local LLM)
+    if (!config.apiKey && config.provider !== "local") {
       errors.push(`API key is required for ${config.provider}`);
     }
 
