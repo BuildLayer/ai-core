@@ -20,6 +20,8 @@ yarn add @buildlayer/ai-core
 
 ## Quick Start
 
+### Simple Usage
+
 ```typescript
 import { ChatStore, createOpenAIAdapter } from "@buildlayer/ai-core";
 
@@ -34,6 +36,142 @@ await chat.send("Hello! How are you today?");
 chat.subscribe((state) => {
   console.log("Chat state:", state);
 });
+```
+
+### Advanced Provider Configuration
+
+```typescript
+import { 
+  ChatStore, 
+  createProviderAdapter, 
+  validateProviderConfig,
+  getAvailableProviders,
+  getAvailableModels,
+  type ProviderConfig 
+} from "@buildlayer/ai-core";
+
+// Configure your AI provider
+const config: ProviderConfig = {
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY!, // Required
+  model: 'gpt-4', // Required
+  options: {
+    temperature: 0.7,
+    maxTokens: 1000,
+    systemPrompt: 'You are a helpful assistant.',
+  },
+};
+
+// Validate configuration
+const validation = validateProviderConfig(config);
+if (!validation.valid) {
+  console.error('Configuration errors:', validation.errors);
+}
+
+// Create adapter and chat store
+const adapter = createProviderAdapter(config);
+const chat = new ChatStore(adapter);
+
+// Get available providers and models
+const providers = getAvailableProviders();
+const models = await getAvailableModels('openai');
+
+console.log('Available providers:', providers);
+console.log('OpenAI models:', models);
+```
+
+## Provider Configuration
+
+The package now includes a powerful provider configuration system that allows you to easily switch between AI providers, validate configurations, and manage models.
+
+### ProviderManager
+
+The `ProviderManager` class provides a centralized way to manage AI providers:
+
+```typescript
+import { providerManager, type ProviderConfig } from "@buildlayer/ai-core";
+
+// Get available providers
+const providers = providerManager.getAvailableProviders();
+console.log(providers); // ['openai', 'anthropic', 'mistral', 'grok', 'local']
+
+// Get available models for a provider
+const models = await providerManager.getAvailableModels('openai');
+console.log(models); // Array of ModelInfo objects
+
+// Create adapter with validation
+const config: ProviderConfig = {
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY!, // Required
+  model: 'gpt-4', // Required
+  options: {
+    temperature: 0.7,
+    maxTokens: 1000,
+  },
+};
+
+const adapter = providerManager.createAdapter(config);
+```
+
+### Configuration Validation
+
+All configurations are validated before creating adapters. **API key and model are required for all providers**:
+
+```typescript
+// ✅ Valid configuration
+const config: ProviderConfig = {
+  provider: 'openai',
+  apiKey: 'sk-...', // Required
+  model: 'gpt-4',   // Required
+};
+
+// ❌ Invalid - missing API key
+const invalidConfig: ProviderConfig = {
+  provider: 'openai',
+  model: 'gpt-4',
+  // Missing apiKey
+};
+```
+
+```typescript
+import { validateProviderConfig } from "@buildlayer/ai-core";
+
+const config: ProviderConfig = {
+  provider: 'openai',
+  apiKey: '', // Empty API key
+  model: 'gpt-4',
+};
+
+const validation = validateProviderConfig(config);
+if (!validation.valid) {
+  console.error('Errors:', validation.errors);
+  // ['API key is required for openai']
+}
+```
+
+### Dynamic Provider Switching
+
+You can easily switch between providers at runtime:
+
+```typescript
+import { createProviderAdapter, ChatStore } from "@buildlayer/ai-core";
+
+const configs = [
+  { provider: 'openai', apiKey: process.env.OPENAI_API_KEY!, model: 'gpt-4' },
+  { provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY!, model: 'claude-3-sonnet' },
+  { provider: 'local', baseURL: 'http://localhost:11434/v1', model: 'llama2', apiKey: 'ollama' },
+];
+
+for (const config of configs) {
+  try {
+    const adapter = createProviderAdapter(config);
+    const chat = new ChatStore(adapter);
+    await chat.send("Hello!");
+    console.log(`Response from ${config.provider}:`, chat.messages[chat.messages.length - 1]);
+  } catch (error) {
+    console.log(`Error with ${config.provider}:`, error);
+  }
+}
 ```
 
 ## Supported AI Providers
@@ -81,7 +219,8 @@ import { createLocalLLMAdapter } from "@buildlayer/ai-core";
 
 const adapter = createLocalLLMAdapter({
   baseURL: "http://localhost:11434/v1", // Ollama default
-  apiKey: process.env.LOCAL_API_KEY, // Optional
+  model: "llama2", // Required
+  apiKey: process.env.LOCAL_API_KEY || "ollama", // Required
 });
 const chat = new ChatStore(adapter);
 ```

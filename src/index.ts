@@ -31,6 +31,8 @@ export type {
   SendOpts,
   ChatActions,
   ChatController,
+  ProviderConfig,
+  ProviderManager,
 } from "./types";
 
 // Core classes
@@ -46,6 +48,16 @@ export {
   createLocalLLMAdapter,
   type TetherAIProvider,
 } from "./adapters";
+
+// Provider Management
+export {
+  AIProviderManager,
+  providerManager,
+  createProviderAdapter,
+  validateProviderConfig,
+  getAvailableProviders,
+  getAvailableModels,
+} from "./provider-manager";
 
 // Example tools
 export { weatherTool } from "./tools/weather";

@@ -120,3 +120,26 @@ export interface ChatActions {
 }
 
 export type ChatController = ChatState & ChatActions;
+
+// Provider Configuration Types
+export interface ProviderConfig {
+  provider: "openai" | "anthropic" | "mistral" | "grok" | "local";
+  apiKey: string;
+  model: string;
+  baseURL?: string; // For custom endpoints
+  options?: {
+    temperature?: number;
+    maxTokens?: number;
+    systemPrompt?: string;
+  };
+}
+
+export interface ProviderManager {
+  getAvailableProviders: () => string[];
+  getAvailableModels: (provider: string) => Promise<ModelInfo[]>;
+  createAdapter: (config: ProviderConfig) => ProviderAdapter;
+  validateConfig: (config: ProviderConfig) => {
+    valid: boolean;
+    errors: string[];
+  };
+}

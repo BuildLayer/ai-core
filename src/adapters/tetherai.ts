@@ -126,30 +126,70 @@ async function* convertStream(
 }
 
 // Pre-configured adapters for each provider
-export function createOpenAIAdapter(apiKey: string): ProviderAdapter {
-  const provider = openAI({ apiKey });
+export function createOpenAIAdapter(
+  apiKey: string,
+  options?: {
+    baseURL?: string;
+    defaultModel?: string;
+  }
+): ProviderAdapter {
+  const provider = openAI({
+    apiKey,
+    baseURL: options?.baseURL,
+  });
   return createTetherAIAdapter(provider);
 }
 
-export function createAnthropicAdapter(apiKey: string): ProviderAdapter {
-  const provider = anthropic({ apiKey });
+export function createAnthropicAdapter(
+  apiKey: string,
+  options?: {
+    baseURL?: string;
+    defaultModel?: string;
+  }
+): ProviderAdapter {
+  const provider = anthropic({
+    apiKey,
+    baseURL: options?.baseURL,
+  });
   return createTetherAIAdapter(provider);
 }
 
-export function createMistralAdapter(apiKey: string): ProviderAdapter {
-  const provider = mistral({ apiKey });
+export function createMistralAdapter(
+  apiKey: string,
+  options?: {
+    baseURL?: string;
+    defaultModel?: string;
+  }
+): ProviderAdapter {
+  const provider = mistral({
+    apiKey,
+    baseURL: options?.baseURL,
+  });
   return createTetherAIAdapter(provider);
 }
 
-export function createGrokAdapter(apiKey: string): ProviderAdapter {
-  const provider = grok({ apiKey });
+export function createGrokAdapter(
+  apiKey: string,
+  options?: {
+    baseURL?: string;
+    defaultModel?: string;
+  }
+): ProviderAdapter {
+  const provider = grok({
+    apiKey,
+    baseURL: options?.baseURL,
+  });
   return createTetherAIAdapter(provider);
 }
 
 export function createLocalLLMAdapter(config: {
   baseURL: string;
-  apiKey?: string;
+  model: string;
+  apiKey: string;
 }): ProviderAdapter {
-  const provider = localLLM(config);
+  const provider = localLLM({
+    baseURL: config.baseURL,
+    apiKey: config.apiKey,
+  });
   return createTetherAIAdapter(provider);
 }

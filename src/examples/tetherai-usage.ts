@@ -45,8 +45,9 @@ export function createGrokChat() {
 // 5. Local LLM Adapter
 export function createLocalLLMChat() {
   const adapter = createLocalLLMAdapter({
-    baseURL: "http://localhost:11434", // Ollama default
-    apiKey: process.env.LOCAL_API_KEY,
+    baseURL: "http://localhost:11434/v1", // Ollama default
+    model: "llama2", // Required
+    apiKey: process.env.LOCAL_API_KEY || "ollama", // Required
   });
   const store = new ChatStore(adapter);
 
