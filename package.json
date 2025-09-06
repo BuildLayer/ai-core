@@ -1,6 +1,6 @@
 {
   "name": "@buildlayer/ai-core",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Headless AI chat engine and store",
   "keywords": [
     "ai",
@@ -42,7 +42,7 @@
     "type": "git",
     "url": "https://github.com/BuildLayer/ai-core"
   },
-  "homepage": "https://buildlayer.dev/ai-ui",
+  "homepage": "https://buildlayer.dev/projects/ai-ui",
   "bugs": {
     "url": "https://github.com/BuildLayer/ai-core/issues"
   },
