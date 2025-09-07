@@ -6,6 +6,13 @@
 ![npm](https://img.shields.io/npm/dw/@buildlayer/ai-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## AI Chat Live Demo
+
+**Try it now:** [ai-react.buildlayer.dev](https://ai-react.buildlayer.dev)
+
+Experience the AI chat with pre-configured custom Local LLM support and all major provider options.
+> Note: Some features are intentionally disabled in this demo version for performance and public access safety.
+
 ## Installation
 
 ```bash
